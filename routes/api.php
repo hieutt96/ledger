@@ -20,3 +20,6 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 Route::get('/recharge', 'RechargeController@create')->middleware('jwt');
 
 
+Route::get('recharge', 'RechargeController@create');
+
+
