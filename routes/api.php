@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
-
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -13,11 +11,5 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
-Route::get('recharge', 'RechargeController@create')->name('recharge.create')->middleware('jwt');
-
-
+Route::post('/recharge', 'RechargeController@create')->middleware('authenticate')->name('recharge.create');
 

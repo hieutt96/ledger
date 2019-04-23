@@ -4,6 +4,8 @@ namespace App\Exceptions;
 
 use Exception;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Log;
+use App\Exceptions\AppException;
 
 class Handler extends ExceptionHandler
 {
@@ -46,6 +48,28 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception $exception)
     {
+        Log::info($exception);
+        if($exception instanceof ValidationException) {
+            $json = [
+                'code' => AppException::ERR_VALIDATION,
+                'message' => $exception->validator->getMessageBag(),
+                'count' => 0,
+                'data' => null,
+            ];
+            return response()->json($json, 200);
+        }
+        $exception_class = get_class($exception);
+
+        if(in_array($exception_class, ['InvalidArgumentException', 'OAuthServerException', 'Illuminate\Auth\AuthenticationException'])) {
+            $json = [
+                'code' => AppException::ERR_INVALID_TOKEN,
+                'message' => "Phiên đăng nhập hết hạn",
+                'count' => 0,
+                'data' => null,
+            ];
+            return response()->json($json, 200);
+        }
+
         return parent::render($request, $exception);
     }
 }
