@@ -22,6 +22,7 @@ class jwt
             
         }
         $data = (array) RequestJWT::decodeJWT($request->jwt); 
+
         if($data['iss'] != env('WEB_API_KEY')) {
             throw new AppException(AppException::ERR_AUTHORIZATION);
             
