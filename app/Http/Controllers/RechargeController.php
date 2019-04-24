@@ -7,6 +7,8 @@ use App\Recharge;
 use App\Libs\Config;
 use App\Txn;
 use App\Account;
+use App\Exceptions\AppException;
+use DB;
 
 class RechargeController extends Controller
 {
@@ -36,6 +38,7 @@ class RechargeController extends Controller
     	$txn->account_id = $account->id;
     	$txn->type = Config::RECHARGE_TYPE;
     	$txn->ref_no = 'mywallet';
+        $txn->stat = Recharge::STAT_PENDING;
     	$txn->save();
 
     	if($request->recharge_type_id == self::RECHARGE_TYPE_VNPAY) {
@@ -192,16 +195,64 @@ class RechargeController extends Controller
             $secureHash = md5($hashSecret . $hashData);
             if($secureHash == $vnp_SecureHash) {
                 if($params['vnp_ResponseCode'] == '00') {
+                    try{
+                        $recharge->stat = Recharge::STAT_SUCCESS;
+                        $recharge->save();
 
+                        $this->createTxnRecharge($request->user, Recharge::STAT_SUCCESS, $recharge->amount);
+                        return $this->_responseJson([
+                            'code' => '00',
+                            'amount' => $recharge->amount,
+                        ]);
+
+                    }catch(Exception $e) {
+                        throw new AppException(AppException::ERR_SYSTEM);
+                        
+                    }
                 }else {
-                    throw new AppException("Error Processing Request", 1);
-                    
+                    $recharge->stat = Recharge::STAT_FAIL;
+                    $recharge->save();
+
+                    $this->createTxnRecharge($request->user, Recharge::STAT_FAIL, $recharge->amount);
+                    return $this->_responseJson([
+                        'code' => '01',
+                    ]);
                 }
             }else {
                 throw new AppException(AppException::ERR_SIGNATURE);
                 
             }
-            dd([$secureHash, $vnp_SecureHash]);
+            throw new AppException(AppException::ERR_SYSTEM);
+        }   
+        
+    }
+
+    public function createTxnRecharge($user, $stat, $amount) {
+
+        DB::beginTransaction();
+        try {
+
+            $account = Account::firstOrCreate(['user_id' => $user->id, 'stat' => 1]);
+            if($stat == Recharge::STAT_SUCCESS) {
+                if($account->balance) {
+                    $account->balance = $account->balance + $amount;
+                    $account->save();
+                }else {
+                    $account->balance = $amount;
+                    $account->save();
+                }
+            }
+            $txn = new Txn;
+            $txn->user_id = $user->id;
+            $txn->account_id = $account->id;
+            $txn->type = Config::RECHARGE_TYPE;
+            $txn->ref_no = 'mywallet';
+            $txn->stat = $stat;
+            $txn->save();
+
+            DB::commit();
+        }catch(Exception $e) {
+            DB::rollback();
         }
     }
 }

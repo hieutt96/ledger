@@ -8,4 +8,5 @@ class Recharge extends Model
 {
     const STAT_PENDING = 1;
     const STAT_SUCCESS = 2;
+    const STAT_FAIL = 3;
 }
