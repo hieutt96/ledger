@@ -24,6 +24,9 @@ class AppException extends Exception {
 	const ERR_AUTHORIZATION = 10;
 	const REQUEST_EXPIRED = 11;
 
+	//loi thanh toan
+	const ERR_SIGNATURE = 97;
+
 	public $message = [];
 	public $code;
 
