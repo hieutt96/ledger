@@ -13,3 +13,5 @@
 
 Route::post('/recharge', 'RechargeController@create')->middleware('authenticate')->name('recharge.create');
 
+Route::post('/recharge/complete', 'RechargeController@complete')->middleware('authenticate')->name('recharge.authenticate');
+

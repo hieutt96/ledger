@@ -157,4 +157,51 @@ class RechargeController extends Controller
         $result = json_decode($result, true);
         return $result['payUrl'];
     }
+
+    public function complete(Request $request) {
+
+        $request->validate([
+            'recharge_id' => 'required',
+        ]);
+        $recharge = Recharge::find($request->recharge_id);
+        if(!$recharge) {
+            throw new AppException(AppException::ERR_SYSTEM);
+            
+        }
+        if($recharge->type == Config::VNPAY_TYPE) {
+
+            foreach($request->all() as $key => $value) {
+                $params[$key] = $value;
+            }
+            $vnp_SecureHash = $params['vnp_SecureHash'];
+            unset($params['vnp_SecureHashType']);
+            unset($params['vnp_SecureHash']);
+            unset($params['recharge_id']);
+            ksort($params);
+            $i = 0;
+            $hashData = "";
+            foreach ($params as $key => $value) {
+                if ($i == 1) {
+                    $hashData = $hashData . '&' . $key . "=" . $value;
+                } else {
+                    $hashData = $hashData . $key . "=" . $value;
+                    $i = 1;
+                }
+            }
+            $hashSecret = Config::VNP_HASH_SECRET;
+            $secureHash = md5($hashSecret . $hashData);
+            if($secureHash == $vnp_SecureHash) {
+                if($params['vnp_ResponseCode'] == '00') {
+
+                }else {
+                    throw new AppException("Error Processing Request", 1);
+                    
+                }
+            }else {
+                throw new AppException(AppException::ERR_SIGNATURE);
+                
+            }
+            dd([$secureHash, $vnp_SecureHash]);
+        }
+    }
 }
