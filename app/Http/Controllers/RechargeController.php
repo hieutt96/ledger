@@ -71,7 +71,7 @@ class RechargeController extends Controller
 		    "vnp_Version" => "2.0.0",
 		    "vnp_TmnCode" => $vnp_TmnCode,
 		    "vnp_Amount" => $vnp_Amount,
-		    "vnp_Command" => "pay",
+		    "vnp_Command" => "querydr",
 		    "vnp_CreateDate" => date('YmdHis'),
 		    "vnp_CurrCode" => "VND",
 		    "vnp_IpAddr" => $vnp_IpAddr,
@@ -80,7 +80,8 @@ class RechargeController extends Controller
 		    "vnp_OrderType" => $vnp_OrderType,
 		    "vnp_ReturnUrl" => $vnp_Returnurl,
 		    "vnp_TxnRef" => $vnp_TxnRef,    
-		    'vnp_Merchant' => 'DEMO',
+		    'vnp_Merchant' => time()."",
+            'vnp_TransactionNo' => time()."",
 		);
 		$out = $inputData;
 		ksort($out);
@@ -196,8 +197,17 @@ class RechargeController extends Controller
             if($secureHash == $vnp_SecureHash) {
                 if($params['vnp_ResponseCode'] == '00') {
                     try{
-                        $recharge->stat = Recharge::STAT_SUCCESS;
-                        $recharge->save();
+                        DB::beginTransaction();
+
+                        try {
+                            $recharge->stat = Recharge::STAT_SUCCESS;
+                            $recharge->save();
+
+                            DB::commit();
+                        }catch(Exception $e) {
+
+                            DB::rollback();
+                        }
 
                         $this->createTxnRecharge($request->user, Recharge::STAT_SUCCESS, $recharge->amount);
                         return $this->_responseJson([
@@ -224,7 +234,22 @@ class RechargeController extends Controller
             }
             throw new AppException(AppException::ERR_SYSTEM);
         }   
-        
+        if($recharge->type == Config::MOMO_TYPE) {
+            if($request->has('errorCode')) {
+                $errCode = $request->errorCode;
+                if($errCode == '0') {
+                    return $this->_responseJson([
+                        'code' => '00',
+                    ]);
+                }else {
+                    return $this->_responseJson([
+                        'code' => '01',
+                    ]);
+                }
+            }else {
+                throw new AppException(AppException::ERR_MOMO_NOT_ERRCODE);    
+            }   
+        }
     }
 
     public function createTxnRecharge($user, $stat, $amount) {

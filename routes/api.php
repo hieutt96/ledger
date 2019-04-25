@@ -10,6 +10,7 @@
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+Route::get('/user-balance', 'UserController@getBalance')->name('user.balance')->middleware('authenticate');
 
 Route::post('/recharge', 'RechargeController@create')->middleware('authenticate')->name('recharge.create');
 
