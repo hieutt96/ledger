@@ -143,6 +143,7 @@ class RechargeController extends Controller
     public function getPayUrlMoMo($recharge, $urlReturn, $urlNotify) {
 
     	$dataRequest = $this->getDataRequestMoMo($recharge, $urlReturn, $urlNotify);
+
     	$url = Config::ENDPOINT_PAYMENT_MOMO;
     	$ch = curl_init($url);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
@@ -152,13 +153,15 @@ class RechargeController extends Controller
             'Content-Type: application/json',
             'Content-Length: ' . strlen($dataRequest))
         );
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         //execute post
         $result = curl_exec($ch);
+        
         //close connection
         curl_close($ch);
         $result = json_decode($result, true);
+
         return $result['payUrl'];
     }
 

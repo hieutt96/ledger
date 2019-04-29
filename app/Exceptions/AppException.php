@@ -27,6 +27,12 @@ class AppException extends Exception {
 	//loi thanh toan
 	const ERR_SIGNATURE = 97;
 	const ERR_MOMO_NOT_ERRCODE = 12;
+
+	const ERR_PASSWORD_INVAILD = 13;
+	const ERR_OVER_BALANCE = 14;
+	const ERR_OVER_TXN = 15;
+	const ERR_DOWN_TXN = 16;
+
 	public $message = [];
 	public $code;
 
