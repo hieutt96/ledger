@@ -56,7 +56,10 @@ class TransferController extends Controller
     	$this->createTransaction($fromUser, $toUser, $request->amount, $fee, $request->description);
 
     	return $this->_responseJson([
-    		'code' => '00',
+    		'email' => $request->email,
+            'amount' => $request->amount,
+            'fee' => $fee,
+            'description' => $request->description,
     	]);
     }
 
@@ -129,7 +132,7 @@ class TransferController extends Controller
     		DB::rollback();
 
     		return $this->_responseJson([
-	    		'code' => '00',
+	    		'code' => '01',
 	    	]);
     	}
     }

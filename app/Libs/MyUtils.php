@@ -18,6 +18,6 @@ class MyUtils {
         if($rs->code != AppException::ERR_NONE) {
         	throw new AppException(AppException::ERR_SYSTEM);
         	
-        }
+                }
 	}
 }

@@ -37,7 +37,7 @@ class RechargeController extends Controller
     	$txn->user_id = $user->id;
     	$txn->account_id = $account->id;
     	$txn->type = Config::RECHARGE_TYPE;
-    	$txn->ref_no = 'mywallet';
+    	$txn->ref_no = 'nạp tiền';
         $txn->stat = Recharge::STAT_PENDING;
     	$txn->save();
 
@@ -71,7 +71,7 @@ class RechargeController extends Controller
 		    "vnp_Version" => "2.0.0",
 		    "vnp_TmnCode" => $vnp_TmnCode,
 		    "vnp_Amount" => $vnp_Amount,
-		    "vnp_Command" => "querydr",
+		    "vnp_Command" => "pay",
 		    "vnp_CreateDate" => date('YmdHis'),
 		    "vnp_CurrCode" => "VND",
 		    "vnp_IpAddr" => $vnp_IpAddr,
@@ -238,20 +238,81 @@ class RechargeController extends Controller
             throw new AppException(AppException::ERR_SYSTEM);
         }   
         if($recharge->type == Config::MOMO_TYPE) {
+            $serectKey = Config::SERECTKEY_MOMO;
+            $params = [];
+            foreach($request->all() as $key => $value) {
+                $params[$key] = $value;
+            }
+            $momoSignature = $params['signature'];
+            $rawHash =  'partnerCode='.$params['partnerCode'].
+                        '&accessKey='.$params['accessKey'].
+                        '&requestId='.$params['requestId'].
+                        '&amount='.$params['amount'].
+                        '&orderId='.$params['orderId'].
+                        '&orderInfo='.$params['orderInfo'].
+                        '&orderType='.$params['orderType'].
+                        '&transId='.$params['transId'].
+                        '&message='.$params['message'].
+                        '&localMessage='.$params['localMessage'].
+                        '&responseTime='.$params['responseTime'].
+                        '&errorCode='.$params['errorCode'].
+                        '&payType='.$params['payType'].
+                        '&extraData='.$params['extraData'];
+            $signature = hash_hmac('sha256', $rawHash, $serectKey);
             if($request->has('errorCode')) {
                 $errCode = $request->errorCode;
                 if($errCode == '0') {
-                    return $this->_responseJson([
-                        'code' => '00',
-                    ]);
+                    if($momoSignature == $signature) {
+                        try{
+                            DB::beginTransaction();
+
+                            try {
+                                $recharge->stat = Recharge::STAT_SUCCESS;
+                                $recharge->save();
+                                $this->createTxnRecharge($request->user, Recharge::STAT_SUCCESS, $recharge->amount);
+
+                                DB::commit();
+                            }catch(Exception $e) {
+
+                                DB::rollback();
+                            }
+
+                            return $this->_responseJson([
+                                'code' => '00',
+                                'amount' => $recharge->amount,
+                            ]);
+
+                        }catch(Exception $e) {
+                            throw new AppException(AppException::ERR_SYSTEM);
+                            
+                        }
+                    }else {
+                        $recharge->stat = Recharge::STAT_FAIL;
+                        $recharge->save();
+
+                        $this->createTxnRecharge($request->user, Recharge::STAT_FAIL, $recharge->amount);
+                        return $this->_responseJson([
+                            'code' => '01',
+                        ]);
+                    }
                 }else {
+                    $recharge->stat = Recharge::STAT_FAIL;
+                    $recharge->save();
+
+                    $this->createTxnRecharge($request->user, Recharge::STAT_FAIL, $recharge->amount);
                     return $this->_responseJson([
                         'code' => '01',
                     ]);
                 }
             }else {
-                throw new AppException(AppException::ERR_MOMO_NOT_ERRCODE);    
-            }   
+                $recharge->stat = Recharge::STAT_FAIL;
+                $recharge->save();
+
+                $this->createTxnRecharge($request->user, Recharge::STAT_FAIL, $recharge->amount);
+                return $this->_responseJson([
+                    'code' => '01',
+                ]);
+            }
         }
     }
 
