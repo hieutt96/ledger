@@ -12,6 +12,7 @@ use App\Txn;
 use App\Libs\Config;
 use App\Account;
 use Cookie;
+use App\Events\TransferSuccess;
 
 class TransferController extends Controller
 {
@@ -34,16 +35,18 @@ class TransferController extends Controller
     	]);
     	if($response->code != AppException::ERR_NONE) {
 
-    		throw new AppException(AppException::ERR_SYSTEM);
+    		throw new AppException(AppException::ERR_ACCOUNT_NOT_FOUND);
     		
     	}
     	$toUser = $response->data;
+
     	$rs = RequestAPI::requestSetting('POST', '/api/txn/caculate-fee', [
     		'headers' => ['Authorization' => $request->header('Authorization')],
     		'form_params' => [
     			'amount' => $request->amount,
     		],
     	]);
+
     	if($rs->code != AppException::ERR_NONE) {
     		throw new AppException(AppException::ERR_SYSTEM);
     		
@@ -66,10 +69,13 @@ class TransferController extends Controller
     public function checkLimitTxn($fromUser, $amount, $fee, $accessToken) {
 
     	$account = Account::where('user_id', $fromUser->id)->first();
-    	if(!$account || ($account->balance < $amount + $fee)) {
-    		throw new AppException(AppException::ERR_OVER_BALANCE);
-    		
-    	}
+        if(!$account) {
+
+            $account = Account::firstOrCreate(['user_id' => $fromUser->id, 'stat' => 1]);
+            if($account->balance < $amount + $fee) {
+                throw new AppException(AppException::ERR_OVER_BALANCE);
+            }
+        }
 
     	$rs = RequestAPI::requestSetting('POST', '/api/txn/check-limit', [
     		'headers' => ['Authorization' => 'Bearer '.$accessToken],
@@ -111,6 +117,7 @@ class TransferController extends Controller
     		$txnFrom->account_id = $accountFrom->id;
     		$txnFrom->ref_no = 'Chuyển tiền';
     		$txnFrom->type = Config::TRANSFER_TYPE;
+            $txnFrom->amount = $amount;
     		$txnFrom->stat = 2;
     		$txnFrom->save();
 
@@ -124,9 +131,12 @@ class TransferController extends Controller
     		$txnFrom->ref_no = 'Nhận tiền chuyển';
     		$txnFrom->type = Config::TRANSFER_TYPE;
     		$txnFrom->stat = 2;
+            $txnFrom->amount = $amount;
     		$txnFrom->save();
 
     		DB::commit();
+            event(new TransferSuccess($accountFrom, $accountTo, $amount));
+
     	}catch(Exception $e) {
 
     		DB::rollback();

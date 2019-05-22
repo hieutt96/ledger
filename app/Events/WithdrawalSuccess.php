@@ -9,9 +9,8 @@ use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use App\Account;
 
-class TransferSuccess
+class WithdrawalSuccess
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -20,15 +19,9 @@ class TransferSuccess
      *
      * @return void
      */
-    public $accountFrom;
-    public $accountTo;
-    public $amount;
-
-    public function __construct(Account $accountFrom, Account $accountTo, $amount)
+    public function __construct()
     {
-        $this->accountFrom = $accountFrom;
-        $this->accountTo = $accountTo;
-        $this->amount = $amount;
+        //
     }
 
     /**
