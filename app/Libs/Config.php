@@ -18,6 +18,7 @@
 
 		const RECHARGE_TYPE = 2;
 		const TRANSFER_TYPE = 1;
+		const WITHDRWAL_TYPE =3;
 
 		const PARTNER_CODE_MOMO = 'MOMO0HGO20180417';
 		const ACCESS_KEY_MOMO = 'E8HZuQRy2RsjVtZp';
