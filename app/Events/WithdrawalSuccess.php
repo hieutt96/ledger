@@ -9,6 +9,7 @@ use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use App\Withdrawal;
 
 class WithdrawalSuccess
 {
@@ -19,9 +20,10 @@ class WithdrawalSuccess
      *
      * @return void
      */
-    public function __construct()
+    public $withdrawal;
+    public function __construct(Withdrawal $withdrawal)
     {
-        //
+        $this->withdrawal = $withdrawal;
     }
 
     /**

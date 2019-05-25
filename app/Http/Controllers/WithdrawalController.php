@@ -9,6 +9,7 @@ use App\Txn;
 use App\Libs\Config;
 use App\Account;
 use DB;
+use App\Events\WithdrawalSuccess;
 
 class WithdrawalController extends Controller
 {
@@ -140,7 +141,7 @@ class WithdrawalController extends Controller
                         try {
                             $withdrawal->stat = Withdrawal::STAT_SUCCESS;
                             $withdrawal->save();
-
+                            event(new WithdrawalSuccess($withdrawal));
                             $this->createTxnWithdrawal($request->user, Withdrawal::STAT_SUCCESS, $withdrawal->amount);
 
                             DB::commit();

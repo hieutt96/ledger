@@ -9,6 +9,7 @@ use App\Txn;
 use App\Account;
 use App\Exceptions\AppException;
 use DB;
+use App\Events\RechargeSuccess;
 
 class RechargeController extends Controller
 {
@@ -269,6 +270,7 @@ class RechargeController extends Controller
                             try {
                                 $recharge->stat = Recharge::STAT_SUCCESS;
                                 $recharge->save();
+                                event(new RechargeSuccess($recharge));
                                 $this->createTxnRecharge($request->user, Recharge::STAT_SUCCESS, $recharge->amount);
 
                                 DB::commit();
@@ -330,6 +332,7 @@ class RechargeController extends Controller
                     $account->balance = $amount;
                     $account->save();
                 }
+
             }
             $txn = new Txn;
             $txn->user_id = $user->id;

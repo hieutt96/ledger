@@ -7,7 +7,11 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use App\Events\TransferSuccess;
+use App\Events\RechargeSuccess;
+use App\Events\WithdrawalSuccess;
 use App\Listeners\TransferSuccessNotification;
+use App\Listeners\RechargeSuccessNotification;
+use App\Listeners\WithdrawalSuccessNotification;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -22,6 +26,12 @@ class EventServiceProvider extends ServiceProvider
         ],
         TransferSuccess::class => [
             TransferSuccessNotification::class,
+        ],
+        RechargeSuccess::class => [
+            RechargeSuccessNotification::class,
+        ],
+        WithdrawalSuccess::class => [
+            WithdrawalSuccessNotification::class,
         ],
     ];
 
