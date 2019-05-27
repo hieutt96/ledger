@@ -23,3 +23,4 @@ Route::post('/transfer/create', 'TransferController@create')->name('transfer.cre
 Route::post('/withdrawal', 'WithdrawalController@create')->name('withdrawal.create')->middleware('authenticate');
 
 Route::post('/withdrawal/complete', 'WithdrawalController@complete')->middleware('authenticate')->name('withdrawal.complete');
+

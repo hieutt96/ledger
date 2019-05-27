@@ -18,6 +18,7 @@ class RechargeController extends Controller
 	const RECHARGE_TYPE_MOMO = 2;
 
     public function create(Request $request) {
+        
     	$request->validate([
     		'recharge_type_id' => 'required',
     		'amount' => 'required|numeric',
@@ -39,6 +40,7 @@ class RechargeController extends Controller
     	$txn->account_id = $account->id;
     	$txn->type = Config::RECHARGE_TYPE;
     	$txn->ref_no = 'nạp tiền';
+        $txn->amount = $request->amount;
         $txn->stat = Recharge::STAT_PENDING;
     	$txn->save();
 
@@ -206,7 +208,8 @@ class RechargeController extends Controller
                         try {
                             $recharge->stat = Recharge::STAT_SUCCESS;
                             $recharge->save();
-
+                            
+                            event(new RechargeSuccess($recharge));
                             DB::commit();
                         }catch(Exception $e) {
 
@@ -270,9 +273,9 @@ class RechargeController extends Controller
                             try {
                                 $recharge->stat = Recharge::STAT_SUCCESS;
                                 $recharge->save();
-                                event(new RechargeSuccess($recharge));
+                                
                                 $this->createTxnRecharge($request->user, Recharge::STAT_SUCCESS, $recharge->amount);
-
+                                event(new RechargeSuccess($recharge));
                                 DB::commit();
                             }catch(Exception $e) {
 
@@ -339,6 +342,7 @@ class RechargeController extends Controller
             $txn->account_id = $account->id;
             $txn->type = Config::RECHARGE_TYPE;
             $txn->ref_no = 'mywallet';
+            $txn->amount = $amount;
             $txn->stat = $stat;
             $txn->save();
 

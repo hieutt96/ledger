@@ -38,6 +38,7 @@ class WithdrawalController extends Controller
     		'user_id' => $user->id,
     		'account_id' => $account->id,
     		'type' => Config::WITHDRWAL_TYPE,
+            'amount' => $request->amount,
     		'ref_no' => 'rút tiền',
     		'stat' => Withdrawal::STAT_PENDING,
     	]);
@@ -49,6 +50,13 @@ class WithdrawalController extends Controller
 				'vpn_url_checkout' => Config::VNPAY_CHECKOUT_URL,
     		]);
     	}
+        if($request->withdrawal_type_id == self::WITHDRAWAL_TYPE_MOMO) {
+
+            return $this->_responseJson([
+                'withdrawal_id' => $withdrawal->id,
+                'pay_url' => $this->getPayUrlMoMo($withdrawal, $request->url_return, $request->url_notify),
+            ]);
+        }
     }
 
     public function createVnpUrl($withdrawal, $urlReturn) {
@@ -141,9 +149,9 @@ class WithdrawalController extends Controller
                         try {
                             $withdrawal->stat = Withdrawal::STAT_SUCCESS;
                             $withdrawal->save();
-                            event(new WithdrawalSuccess($withdrawal));
+                           
                             $this->createTxnWithdrawal($request->user, Withdrawal::STAT_SUCCESS, $withdrawal->amount);
-
+                             event(new WithdrawalSuccess($withdrawal));
                             DB::commit();
 
                             return $this->_responseJson([
@@ -184,83 +192,146 @@ class WithdrawalController extends Controller
             }
             throw new AppException(AppException::ERR_SYSTEM);
         }   
-        // if($withdrawal->type == Config::MOMO_TYPE) {
-        //     $serectKey = Config::SERECTKEY_MOMO;
-        //     $params = [];
-        //     foreach($request->all() as $key => $value) {
-        //         $params[$key] = $value;
-        //     }
-        //     $momoSignature = $params['signature'];
-        //     $rawHash =  'partnerCode='.$params['partnerCode'].
-        //                 '&accessKey='.$params['accessKey'].
-        //                 '&requestId='.$params['requestId'].
-        //                 '&amount='.$params['amount'].
-        //                 '&orderId='.$params['orderId'].
-        //                 '&orderInfo='.$params['orderInfo'].
-        //                 '&orderType='.$params['orderType'].
-        //                 '&transId='.$params['transId'].
-        //                 '&message='.$params['message'].
-        //                 '&localMessage='.$params['localMessage'].
-        //                 '&responseTime='.$params['responseTime'].
-        //                 '&errorCode='.$params['errorCode'].
-        //                 '&payType='.$params['payType'].
-        //                 '&extraData='.$params['extraData'];
-        //     $signature = hash_hmac('sha256', $rawHash, $serectKey);
-        //     if($request->has('errorCode')) {
-        //         $errCode = $request->errorCode;
-        //         if($errCode == '0') {
-        //             if($momoSignature == $signature) {
-        //                 try{
-        //                     DB::beginTransaction();
+        if($withdrawal->type == Config::MOMO_TYPE) {
+            $serectKey = Config::SERECTKEY_MOMO;
+            $params = [];
+            foreach($request->all() as $key => $value) {
+                $params[$key] = $value;
+            }
+            $momoSignature = $params['signature'];
+            $rawHash =  'partnerCode='.$params['partnerCode'].
+                        '&accessKey='.$params['accessKey'].
+                        '&requestId='.$params['requestId'].
+                        '&amount='.$params['amount'].
+                        '&orderId='.$params['orderId'].
+                        '&orderInfo='.$params['orderInfo'].
+                        '&orderType='.$params['orderType'].
+                        '&transId='.$params['transId'].
+                        '&message='.$params['message'].
+                        '&localMessage='.$params['localMessage'].
+                        '&responseTime='.$params['responseTime'].
+                        '&errorCode='.$params['errorCode'].
+                        '&payType='.$params['payType'].
+                        '&extraData='.$params['extraData'];
+            $signature = hash_hmac('sha256', $rawHash, $serectKey);
+            if($request->has('errorCode')) {
+                $errCode = $request->errorCode;
+                if($errCode == '0') {
+                    if($momoSignature == $signature) {
+                        try{
+                            DB::beginTransaction();
 
-        //                     try {
-        //                         $withdrawal->stat = Withdrawal::STAT_SUCCESS;
-        //                         $withdrawal->save();
-        //                         $this->createTxnWithdrawal($request->user, Withdrawal::STAT_SUCCESS, $withdrawal->amount);
+                            try {
+                                $withdrawal->stat = Withdrawal::STAT_SUCCESS;
+                                $withdrawal->save();
+                                $this->createTxnWithdrawal($request->user, Withdrawal::STAT_SUCCESS, $withdrawal->amount);
+                                 event(new WithdrawalSuccess($withdrawal));
+                                DB::commit();
+                            }catch(Exception $e) {
 
-        //                         DB::commit();
-        //                     }catch(Exception $e) {
+                                DB::rollback();
+                            }
 
-        //                         DB::rollback();
-        //                     }
+                            return $this->_responseJson([
+                                'code' => '00',
+                                'amount' => $withdrawal->amount,
+                            ]);
 
-        //                     return $this->_responseJson([
-        //                         'code' => '00',
-        //                         'amount' => $withdrawal->amount,
-        //                     ]);
-
-        //                 }catch(Exception $e) {
-        //                     throw new AppException(AppException::ERR_SYSTEM);
+                        }catch(Exception $e) {
+                            throw new AppException(AppException::ERR_SYSTEM);
                             
-        //                 }
-        //             }else {
-        //                 $withdrawal->stat = Withdrawal::STAT_FAIL;
-        //                 $withdrawal->save();
+                        }
+                    }else {
+                        $withdrawal->stat = Withdrawal::STAT_FAIL;
+                        $withdrawal->save();
 
-        //                 $this->createTxnWithdrawal($request->user, Withdrawal::STAT_FAIL, $withdrawal->amount);
-        //                 return $this->_responseJson([
-        //                     'code' => '01',
-        //                 ]);
-        //             }
-        //         }else {
-        //             $withdrawal->stat = Withdrawal::STAT_FAIL;
-        //             $withdrawal->save();
+                        $this->createTxnWithdrawal($request->user, Withdrawal::STAT_FAIL, $withdrawal->amount);
+                        return $this->_responseJson([
+                            'code' => '01',
+                            'message' => 'Sai Chữ kí',
+                        ]);
+                    }
+                }else {
+                    $withdrawal->stat = Withdrawal::STAT_FAIL;
+                    $withdrawal->save();
 
-        //             $this->createTxnWithdrawal($request->user, Withdrawal::STAT_FAIL, $withdrawal->amount);
-        //             return $this->_responseJson([
-        //                 'code' => '01',
-        //             ]);
-        //         }
-        //     }else {
-        //         $withdrawal->stat = Withdrawal::STAT_FAIL;
-        //         $withdrawal->save();
+                    $this->createTxnWithdrawal($request->user, Withdrawal::STAT_FAIL, $withdrawal->amount);
+                    return $this->_responseJson([
+                        'code' => '01',
+                        'message' => 'Sai mã code trả về',
+                    ]);
+                }
+            }else {
+                $withdrawal->stat = Withdrawal::STAT_FAIL;
+                $withdrawal->save();
 
-        //         $this->createTxnWithdrawal($request->user, Withdrawal::STAT_FAIL, $withdrawal->amount);
-        //         return $this->_responseJson([
-        //             'code' => '01',
-        //         ]);
-        //     }
-        // }
+                $this->createTxnWithdrawal($request->user, Withdrawal::STAT_FAIL, $withdrawal->amount);
+                return $this->_responseJson([
+                    'code' => '01',
+                    'message' => 'Dữ liệu trả về không đầy đủ',
+                ]);
+            }
+        }
+    }
+
+
+    public function getPayUrlMoMo($withdrawal, $urlReturn, $urlNotify) {
+        
+        $dataRequest = $this->getDataRequestMoMo($withdrawal, $urlReturn, $urlNotify);
+
+        $url = Config::ENDPOINT_PAYMENT_MOMO;
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $dataRequest);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($dataRequest))
+        );
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        //execute post
+        $result = curl_exec($ch);
+        
+        //close connection
+        curl_close($ch);
+        $result = json_decode($result, true);
+        return $result['payUrl'];
+    }
+
+    public function getDataRequestMoMo($withdrawal, $urlReturn, $urlNotify) {
+
+        $withdrawalId = $withdrawal->id;
+        $partnerCode = Config::PARTNER_CODE_MOMO;
+        $accessKey = Config::ACCESS_KEY_MOMO;
+        $serectkey = Config::SERECTKEY_MOMO;
+        $orderInfo = "Ma thanh toan dich vu ".$withdrawalId;
+        $returnUrl = $urlReturn;
+        $notifyurl = $urlNotify;
+        $amount = ''.$withdrawal->amount.'';
+        $orderid = time()."";
+        $requestId = "".$withdrawalId."";
+        $requestType = "captureMoMoWallet";
+        $extraData = "merchantName=Mywallet;merchantId=3948";
+        //before sign HMAC SHA256 signature
+        $rawHash = "partnerCode=".$partnerCode."&accessKey=".$accessKey."&requestId=".$requestId."&amount=".$amount."&orderId=".$orderid."&orderInfo=".$orderInfo."&returnUrl=".$returnUrl."&notifyUrl=".$notifyurl."&extraData=".$extraData;
+        // echo "Raw signature: ".$rawHash."\n";
+        $signature = hash_hmac("sha256", $rawHash, $serectkey);
+        $data =  array(
+            'partnerCode' => $partnerCode,
+            'accessKey' => $accessKey,
+            'requestId' => $requestId,
+            'amount' => $amount,
+            'orderId' => $orderid,
+            'orderInfo' => $orderInfo,
+            'requestType' => "refundMoMoWallet",
+            'returnUrl' => $returnUrl,
+            'notifyUrl' => $notifyurl,
+            'extraData' => $extraData,
+            'requestType' => $requestType,
+            'signature' => $signature
+        );
+        return json_encode($data);
     }
 
     public function createTxnWithdrawal($user, $stat, $amount) {
@@ -273,6 +344,7 @@ class WithdrawalController extends Controller
                 if($account->balance > $amount) {
                     $account->balance = $account->balance - $amount;
                     $account->save();
+
                 }else {
                    return $this->_responseJson([
 	                    'code' => '02',
@@ -283,6 +355,7 @@ class WithdrawalController extends Controller
             $txn->user_id = $user->id;
             $txn->account_id = $account->id;
             $txn->type = Config::WITHDRWAL_TYPE;
+            $txn->amount = $amount;
             $txn->ref_no = 'rút tiền thành công';
             $txn->stat = $stat;
             $txn->save();
