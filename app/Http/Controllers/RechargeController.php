@@ -16,6 +16,7 @@ class RechargeController extends Controller
 
 	const RECHARGE_TYPE_VNPAY = 1;
 	const RECHARGE_TYPE_MOMO = 2;
+    const RECHARGE_TYPE_ONEPAY = 3;
 
     public function create(Request $request) {
         
@@ -57,6 +58,53 @@ class RechargeController extends Controller
 				'pay_url' => $this->getPayUrlMoMo($recharge, $request->url_return, $request->url_notify),
     		]);
     	}
+        if($request->recharge_type_id == self::RECHARGE_TYPE_ONEPAY) {
+            
+            return $this->_responseJson([
+                'recharge_id' => $recharge->id,
+                'pay_url' => $this->getPayUrlOnePay($recharge, $request->url_return, $request->url_notify),
+                'vpc_url_checkout' => Config::ONEPAY_CHECKOUT_URL,
+            ]);
+
+        }
+    }
+
+    protected function getPayUrlOnePay($recharge, $urlReturn, $urlNotify) {
+
+        $inputData = [
+            'vpc_Version' => 2,
+            'vpc_Command' => 'pay',
+            'vpc_AccessCode' => '6BEB2546',
+            'vpc_Merchant' => 'TESTONEPAY',
+            'vpc_Locale' => 'vn',
+            'vpc_ReturnURL' => $urlReturn,
+            'vpc_MerchTxnRef' => time()."",
+            'vpc_OrderInfo' => 'Ma giao dich '. $recharge->id."",
+            'vpc_Amount' => $recharge->amount*100,
+            'vpc_TicketNo' => $_SERVER['REMOTE_ADDR'],
+            'AgainLink' => Config::CLIENT_DOMAIN,
+            'Title' => 'MyWallet',
+        ];
+        $out = $inputData;
+        ksort($out);
+        $query = "";
+        $i = 0;
+        $hashdata = "";
+        foreach ($out as $key => $value) {
+            if ($i == 1) {
+                $hashdata .= '&' . $key . "=" . $value;
+            } else {
+                $hashdata .= $key . "=" . $value;
+                $i = 1;
+            }
+            $query .= urlencode($key) . "=" . urlencode($value) . '&';
+        }
+
+        $vpc_Url = "?" . $query;
+        $vpcSecureHash = hash_hmac("sha256", $hashdata, '6D0870CDE5F24F34F3915FB0045120DB');
+
+        $vpc_Url .= 'vpc_SecureHash=' .$vpcSecureHash;
+        return $vpc_Url;
     }
 
     protected function createVnpUrl($recharge, $urlReturn) {

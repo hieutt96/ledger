@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "bschmitt/laravel-amqp",
-            "version": "2.0.6",
+            "version": "2.0.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bschmitt/laravel-amqp.git",
-                "reference": "0cd2cc6a651faa90e4ccc51d6d70f79bf80f1118"
+                "reference": "5aa814636295ad67a14da134019ab391dd6aec1e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bschmitt/laravel-amqp/zipball/0cd2cc6a651faa90e4ccc51d6d70f79bf80f1118",
-                "reference": "0cd2cc6a651faa90e4ccc51d6d70f79bf80f1118",
+                "url": "https://api.github.com/repos/bschmitt/laravel-amqp/zipball/5aa814636295ad67a14da134019ab391dd6aec1e",
+                "reference": "5aa814636295ad67a14da134019ab391dd6aec1e",
                 "shasum": ""
             },
             "require": {
@@ -70,7 +70,7 @@
                 "queue",
                 "rabbitmq"
             ],
-            "time": "2019-05-09T12:09:33+00:00"
+            "time": "2019-05-27T10:38:44+00:00"
         },
         {
             "name": "dnoegel/php-xdg-base-dir",
@@ -1419,16 +1419,16 @@
         },
         {
             "name": "nikic/php-parser",
-            "version": "v4.2.1",
+            "version": "v4.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "5221f49a608808c1e4d436df32884cbc1b821ac0"
+                "reference": "1bd73cc04c3843ad8d6b0bfc0956026a151fc420"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/5221f49a608808c1e4d436df32884cbc1b821ac0",
-                "reference": "5221f49a608808c1e4d436df32884cbc1b821ac0",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/1bd73cc04c3843ad8d6b0bfc0956026a151fc420",
+                "reference": "1bd73cc04c3843ad8d6b0bfc0956026a151fc420",
                 "shasum": ""
             },
             "require": {
@@ -1466,7 +1466,7 @@
                 "parser",
                 "php"
             ],
-            "time": "2019-02-16T20:54:15+00:00"
+            "time": "2019-05-25T20:07:01+00:00"
         },
         {
             "name": "opis/closure",

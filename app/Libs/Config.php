@@ -15,6 +15,7 @@
 		const MOMO_TYPE = 2;
 
 		const VNPAY_CHECKOUT_URL = 'http://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+		const ONEPAY_CHECKOUT_URL = 'https://mtf.onepay.vn/vpcpay/Vpcdps.op';
 
 		const RECHARGE_TYPE = 2;
 		const TRANSFER_TYPE = 1;
