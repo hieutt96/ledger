@@ -10,6 +10,7 @@ use App\Account;
 use App\Exceptions\AppException;
 use DB;
 use App\Events\RechargeSuccess;
+use Log;
 
 class RechargeController extends Controller
 {
@@ -63,7 +64,7 @@ class RechargeController extends Controller
             return $this->_responseJson([
                 'recharge_id' => $recharge->id,
                 'pay_url' => $this->getPayUrlOnePay($recharge, $request->url_return, $request->url_notify),
-                'vpc_url_checkout' => Config::ONEPAY_CHECKOUT_URL,
+                'vpc_url_checkout' => Config::ONEPAY_CHECKOUT_URL_OUT,
             ]);
 
         }
@@ -72,13 +73,13 @@ class RechargeController extends Controller
     protected function getPayUrlOnePay($recharge, $urlReturn, $urlNotify) {
 
         $inputData = [
-            'vpc_Version' => 2,
-            'vpc_Command' => 'pay',
-            'vpc_AccessCode' => '6BEB2546',
-            'vpc_Merchant' => 'TESTONEPAY',
+            'vpc_Version' => "2",
+            'vpc_Command' => "pay",
+            'vpc_AccessCode' => Config::ONEPAY_ACCESS_CODE,
+            'vpc_Merchant' => Config::ONEPAY_MERCHANT_ID,
             'vpc_Locale' => 'vn',
             'vpc_ReturnURL' => $urlReturn,
-            'vpc_MerchTxnRef' => time()."",
+            'vpc_MerchTxnRef' => time()."my_wallet",
             'vpc_OrderInfo' => 'Ma giao dich '. $recharge->id."",
             'vpc_Amount' => $recharge->amount*100,
             'vpc_TicketNo' => $_SERVER['REMOTE_ADDR'],
@@ -87,24 +88,28 @@ class RechargeController extends Controller
         ];
         $out = $inputData;
         ksort($out);
-        $query = "";
+        $vpcUrl = "";
         $i = 0;
         $hashdata = "";
         foreach ($out as $key => $value) {
+            
             if ($i == 1) {
-                $hashdata .= '&' . $key . "=" . $value;
+                $vpcUrl .= '&' . urlencode($key) . "=" . urlencode($value);
             } else {
-                $hashdata .= $key . "=" . $value;
+                $vpcUrl .= urlencode($key) . "=" . urlencode($value);
                 $i = 1;
             }
-            $query .= urlencode($key) . "=" . urlencode($value) . '&';
+            if((substr($key, 0,4)=="vpc_") || (substr($key,0,5) =="user_")) {
+
+                $hashdata .= $key . "=" . $value . '&';
+            }
         }
+        $hashdata = rtrim($hashdata, "&");
 
-        $vpc_Url = "?" . $query;
-        $vpcSecureHash = hash_hmac("sha256", $hashdata, '6D0870CDE5F24F34F3915FB0045120DB');
+        $vpcSecureHash = strtoupper(hash_hmac("SHA256", $hashdata, pack('H*',Config::ONEPAY_HASHCODE)));
 
-        $vpc_Url .= 'vpc_SecureHash=' .$vpcSecureHash;
-        return $vpc_Url;
+        $vpcUrl .= '&vpc_SecureHash=' .$vpcSecureHash;
+        return $vpcUrl;
     }
 
     protected function createVnpUrl($recharge, $urlReturn) {
@@ -367,6 +372,88 @@ class RechargeController extends Controller
                 ]);
             }
         }
+        if($recharge->type == Config::ONEPAY_TYPE) {
+            $serectKey = Config::ONEPAY_HASHCODE;
+            $params = [];
+            foreach($request->all() as $key => $value) {
+                $params[$key] = $value;
+            }
+            $vpc_SecureHash = $params['vpc_SecureHash'];
+            ksort($params);
+            // Log::info('secury_hash'.$vpc_SecureHash);
+            $md5HashData = '';
+            foreach($params as $key => $value) {
+
+                if($key != 'vpc_SecureHash' && $key != 'recharge_id' && ((substr($key, 0,4)=="vpc_") || (substr($key,0,5) =="user_"))) {
+
+                    $md5HashData .= $key . "=" . $value . "&";
+                }
+            }
+            $md5HashData = rtrim($md5HashData, "&");
+
+            $signature = strtoupper(hash_hmac('SHA256', $md5HashData, pack('H*',$serectKey)));
+
+            // Log::info('signature'.$signature);
+
+            if($request->has('vpc_TxnResponseCode')) {
+                $errCode = $request->vpc_TxnResponseCode;
+                if($errCode == '0') {
+                    if(strtoupper($vpc_SecureHash) == $signature) {
+                        try{
+                            DB::beginTransaction();
+
+                            try {
+                                $recharge->stat = Recharge::STAT_SUCCESS;
+                                $recharge->save();
+                                
+                                $this->createTxnRecharge($request->user, Recharge::STAT_SUCCESS, $recharge->amount);
+                                event(new RechargeSuccess($recharge));
+                                DB::commit();
+                            }catch(Exception $e) {
+
+                                DB::rollback();
+                            }
+
+                            return $this->_responseJson([
+                                'code' => '00',
+                                'amount' => $recharge->amount,
+                            ]);
+
+                        }catch(Exception $e) {
+                            throw new AppException(AppException::ERR_SYSTEM);
+                            
+                        }
+                    }else {
+                        $recharge->stat = Recharge::STAT_FAIL;
+                        $recharge->save();
+
+                        $this->createTxnRecharge($request->user, Recharge::STAT_FAIL, $recharge->amount);
+                        return $this->_responseJson([
+                            'code' => '01',
+                            'message' => 'Chữ kí không hợp lệ',
+                        ]);
+                    }
+                }else {
+                    $recharge->stat = Recharge::STAT_FAIL;
+                    $recharge->save();
+
+                    $this->createTxnRecharge($request->user, Recharge::STAT_FAIL, $recharge->amount);
+                    return $this->_responseJson([
+                        'code' => '01',
+                        'message' => 'Mã code trả về thất bại',
+                    ]);
+                }
+            }else {
+                $recharge->stat = Recharge::STAT_FAIL;
+                $recharge->save();
+
+                $this->createTxnRecharge($request->user, Recharge::STAT_FAIL, $recharge->amount);
+                return $this->_responseJson([
+                    'code' => '01',
+                    'message' => 'Không có mã code trả về',
+                ]);
+            }
+        }
     }
 
     public function createTxnRecharge($user, $stat, $amount) {
@@ -389,7 +476,11 @@ class RechargeController extends Controller
             $txn->user_id = $user->id;
             $txn->account_id = $account->id;
             $txn->type = Config::RECHARGE_TYPE;
-            $txn->ref_no = 'mywallet';
+            if($stat == Recharge::STAT_SUCCESS) {
+                $txn->ref_no = 'nạp tiền thành công';
+            }else {
+                $txn->ref_no = 'nạp tiền thất bại';
+            }
             $txn->amount = $amount;
             $txn->stat = $stat;
             $txn->save();

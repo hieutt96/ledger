@@ -13,9 +13,14 @@
 
 		const VNPAY_TYPE = 1;
 		const MOMO_TYPE = 2;
+		const ONEPAY_TYPE = 3;
 
 		const VNPAY_CHECKOUT_URL = 'http://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
-		const ONEPAY_CHECKOUT_URL = 'https://mtf.onepay.vn/vpcpay/Vpcdps.op';
+		// const ONEPAY_CHECKOUT_URL = 'https://mtf.onepay.vn/vpcpay/Vpcdps.op';
+		const ONEPAY_CHECKOUT_URL_OUT =	'https://mtf.onepay.vn/vpcpay/vpcpay.op';
+		const ONEPAY_ACCESS_CODE = '6BEB2546';
+		const ONEPAY_MERCHANT_ID = 'TESTONEPAY';
+		const ONEPAY_HASHCODE = '6D0870CDE5F24F34F3915FB0045120DB';
 
 		const RECHARGE_TYPE = 2;
 		const TRANSFER_TYPE = 1;

@@ -10,8 +10,9 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use App\Account;
+use Log;
 
-class TransferSuccess
+class TransferSuccess implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -38,6 +39,13 @@ class TransferSuccess
      */
     public function broadcastOn()
     {
-        return new PrivateChannel('channel-name');
+        Log::info('Send Data Pusher');
+
+        return new Channel('channel-transfer');
+    }
+
+    public function broadcastAs()
+    {
+        return 'mywallet.transfer_'.$this->accountTo->user_id;
     }
 }
