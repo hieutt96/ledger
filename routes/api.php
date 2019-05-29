@@ -24,3 +24,5 @@ Route::post('/withdrawal', 'WithdrawalController@create')->name('withdrawal.crea
 
 Route::post('/withdrawal/complete', 'WithdrawalController@complete')->middleware('authenticate')->name('withdrawal.complete');
 
+Route::post('/store/minus', 'StoreController@minus')->name('store.minus');
+
