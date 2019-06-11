@@ -26,3 +26,16 @@ Route::post('/withdrawal/complete', 'WithdrawalController@complete')->middleware
 
 Route::post('/store/minus', 'StoreController@minus')->name('store.minus');
 
+Route::group(['prefix' => '/merchant'], function(){
+
+	Route::post('/payment-url', 'MerchantController@getUrlPay')->name('merchant.url_payment');
+
+});
+
+Route::group(['prefix' => 'order'], function(){
+
+	Route::get('/detail', 'OrderController@detail')->name('order.detail');
+
+	Route::post('/payment', 'OrderController@payment')->name('order.payment');
+});
+

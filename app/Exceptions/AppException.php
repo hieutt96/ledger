@@ -32,6 +32,10 @@ class AppException extends Exception {
 	const ERR_OVER_BALANCE = 14;
 	const ERR_OVER_TXN = 15;
 	const ERR_DOWN_TXN = 16;
+	const ERR_ORDER_EXIST = 17;
+	const ERR_MERCHANT_NOT_FOUND = 18;
+	const ERR_ORDER_NOT_EXIST = 19;
+	const ERR_ORDER_PAYMENT = 20;
 
 	public $message = [];
 	public $code;

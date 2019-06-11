@@ -27,6 +27,7 @@
 		const TRANSFER_TYPE = 1;
 		const WITHDRWAL_TYPE =3;
 		const STORE_MINUS = 4;
+		const ORDER_TYPE = 5;
 
 		const PARTNER_CODE_MOMO = 'MOMO0HGO20180417';
 		const ACCESS_KEY_MOMO = 'E8HZuQRy2RsjVtZp';
